@@ -1,0 +1,56 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+}
+
+.login-container {
+    background: transparent;
+}
+
+.login-card {
+    background: white;
+    max-width: 400px;
+    width: 100%;
+    padding: 30px;
+}
+
+.login-card h2 {
+    font-weight: 700;
+    color: #333;
+}
+
+.login-card p {
+    font-size: 0.9rem;
+}
+
+.category-card {
+    border-radius: 10px;
+}
+
+.category-card .card-header {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.list-group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+input.form-control {
+    height: 40px;
+    font-size: 0.95rem;
+}
+
+.btn-danger, .btn-warning, .btn-info, .btn-success {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+}
+
+/* Untuk modal input lebih rapi */
+.modal .form-control {
+    font-size: 0.95rem;
+}

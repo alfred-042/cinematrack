@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" class="bg-gray-900 text-gray-100">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title><%= title || 'Cinema' %></title>
+
+
+<!-- Tailwind Play CDN (quick) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+// Tailwind config for colors
+tailwind.config = {
+theme: {
+extend: {
+colors: {
+darkbg: '#1a1a1a',
+card: '#2a2a2a',
+soft: '#6c6c6c'
+}
+}
+}
+}
+</script>
+
+
+<link rel="stylesheet" href="/public/styles/custom.css"> <!-- optional custom css file -->
+</head>
+<body class="bg-darkbg text-gray-100">
+<div id="app" class="min-h-screen">
