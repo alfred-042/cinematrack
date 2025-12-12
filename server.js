@@ -7,14 +7,15 @@ const path = require("path");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const methodOverride = require("method-override");
-const fetch = require("node-fetch"); // OMDb fetch
+const fetch = require("node-fetch");
 
 const Movie = require("./models/movie");
 const User = require("./models/User");
 
 const app = express();
 
-const DEFAULT_POSTER = "/images/default-poster.png"; // buat file ini di public/images/
+// Default poster
+const DEFAULT_POSTER = "/images/default-poster.png";
 
 /* --------------------
    MONGO DB CONNECT
@@ -25,7 +26,7 @@ async function connectDB() {
         console.log("✅ MongoDB Atlas connected");
     } catch (err) {
         console.error("❌ MongoDB connection error:", err);
-        process.exit(1);
+        // Jangan bunuh process di Railway
     }
 }
 connectDB();
@@ -40,9 +41,13 @@ app.use(methodOverride("_method"));
 
 app.use(
     session({
-        secret: process.env.SESSION_SECRET || "secret",
+        secret: process.env.SESSION_SECRET || "fallback_secret",
         resave: false,
-        saveUninitialized: false
+        saveUninitialized: false,
+        cookie: {
+            secure: false, // harus false untuk Railway HTTP
+            httpOnly: true
+        }
     })
 );
 
@@ -58,12 +63,18 @@ passport.deserializeUser(async (id, done) => {
     done(null, user);
 });
 
+// Callback URL harus absolute di prod
+const CALLBACK_URL =
+    process.env.NODE_ENV === "production"
+        ? `${process.env.RAILWAY_PUBLIC_DOMAIN}/auth/google/callback`
+        : "/auth/google/callback";
+
 passport.use(
     new GoogleStrategy(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: "/auth/google/callback"
+            callbackURL: CALLBACK_URL
         },
         async (accessToken, refreshToken, profile, done) => {
             let user = await User.findOne({ googleId: profile.id });
@@ -88,15 +99,17 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 /* --------------------
-   ROUTES
+   HEALTH CHECK
 -------------------- */
+app.get("/health", (req, res) => res.send("OK"));
 app.get("/", (req, res) => res.redirect("/login"));
+
+/* --------------------
+   AUTH ROUTES
+-------------------- */
 app.get("/login", (req, res) => res.render("login"));
 app.get("/register", (req, res) => res.render("register"));
 
-/* --------------------
-   LOCAL REGISTER
--------------------- */
 app.post("/auth/local-register", async (req, res) => {
     const { email, password } = req.body;
 
@@ -114,9 +127,6 @@ app.post("/auth/local-register", async (req, res) => {
     res.redirect("/login");
 });
 
-/* --------------------
-   LOCAL LOGIN
--------------------- */
 app.post("/auth/local-login", async (req, res) => {
     const { email, password } = req.body;
 
@@ -149,7 +159,7 @@ app.get(
 );
 
 /* --------------------
-   MIDDLEWARE PROTECT
+   AUTH MIDDLEWARE
 -------------------- */
 function ensureLogin(req, res, next) {
     if (req.isAuthenticated() || req.session.user) return next();
@@ -172,17 +182,15 @@ app.get("/dashboard", ensureLogin, async (req, res) => {
    LOGOUT
 -------------------- */
 app.get("/logout", (req, res) => {
+    req.logout(() => {});
     req.session.destroy(() => {
-        req.logout(() => {});
         res.redirect("/login");
     });
 });
 
 /* --------------------
-   MOVIE CRUD (WITH OMDB POSTER)
+   MOVIE CRUD
 -------------------- */
-
-// CREATE MOVIE + poster otomatis
 app.post("/movies", ensureLogin, async (req, res) => {
     try {
         const userId = req.user ? req.user._id : req.session.user.id;
@@ -218,7 +226,6 @@ app.post("/movies", ensureLogin, async (req, res) => {
     }
 });
 
-// UPDATE MOVIE + update poster jika judul berubah
 app.put("/movies/:id", ensureLogin, async (req, res) => {
     try {
         const userId = req.user ? req.user._id : req.session.user.id;
@@ -256,7 +263,6 @@ app.put("/movies/:id", ensureLogin, async (req, res) => {
     }
 });
 
-// DELETE
 app.delete("/movies/:id", ensureLogin, async (req, res) => {
     const userId = req.user ? req.user._id : req.session.user.id;
     await Movie.findOneAndDelete({ _id: req.params.id, userId });
@@ -264,7 +270,7 @@ app.delete("/movies/:id", ensureLogin, async (req, res) => {
 });
 
 /* --------------------
-   PROFILE PAGES
+   PROFILE
 -------------------- */
 app.get("/profile", ensureLogin, async (req, res) => {
     const userId = req.user ? req.user._id : req.session.user.id;
@@ -339,4 +345,6 @@ app.post("/profile/update", ensureLogin, async (req, res) => {
    START SERVER
 -------------------- */
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+});
